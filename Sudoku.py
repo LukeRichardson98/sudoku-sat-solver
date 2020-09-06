@@ -1,214 +1,130 @@
-
 import pycosat
-import sys, getopt 
-import time
+import ipdb
 
-def main(argv): 
-    argument = '' 
-    try:
-        opts, args = getopt.getopt(argv,"emhvb",["easy","medium","hard","evil","blank","help"])
-    except getopt.GetoptError:
-        print('Argument error, check -h | --help')
-        sys.exit(2)
+N = 9
+M = 3
+
+def getAllValidMoves(x0, y0):
+    deltas = [(-2, -1), (-2, +1), (+2, -1), (+2, +1), (-1, -2), (-1, +2), (+1, -2), (+1, +2)]
+    validPositions = []
     
-    for opt, arg in opts: 
-        if opt in ("--help"):
-            help()
-        elif opt in ("-e", "--easy"): 
-            solve_problem(easy) 
-        elif opt in ("-m", "--medium"): 
-            solve_problem(medium) 
-        elif opt in ("-h", "--hard"):
-            solve_problem(hard) 
-        elif opt in ("-v", "--evil"):
-            solve_problem(evil) 
-        elif opt in ("-b", "--blank"):
-            solve_problem(blank) 
-        else:
-            help()
-            sys.exit()
-            
-def help():
-    print('Usage:')
-    print('Sudoku.py -e [or] --easy')
-    print('Sudoku.py -m [or] --medium')
-    print('Sudoku.py -h [or] --hard')
-    print('Sudoku.py -v [or] --evil')
-    print('Sudoku.py -b [or] --blank')
-    sys.exit()
+    for (x, y) in deltas:
+        xCandidate = x0 + x
+        yCandidate = y0 + y
+        if 0 < xCandidate < 8 and 0 < yCandidate < 8:
+            validPositions.append([xCandidate, yCandidate])
 
-def solve_problem(problemset):
-    print('Problem:') 
-    pprint(problemset)  
-    solve(problemset) 
-    print('Answer:')
-    pprint(problemset)  
+    return validPositions
+
+def exactly_one_knights(variables):
+    cnf = []
+
+    for valid_move in variables[:-1]:
+        # print(valid_move)
+        cnf.append([-valid_move, -variables[-1]])
     
-def v(i, j, d):
-    return 81 * (i - 1) + 9 * (j - 1) + d
+    return cnf
 
-#Reduces Sudoku problem to a SAT clauses 
-def sudoku_clauses(): 
-    res = []
-    # for all cells, ensure that the each cell:
-    for i in range(1, 10):
-        for j in range(1, 10):
-            # denotes (at least) one of the 9 digits (1 clause)
-            res.append([v(i, j, d) for d in range(1, 10)])
-            # does not denote two different digits at once (36 clauses)
-            for d in range(1, 10):
-                for dp in range(d + 1, 10):
-                    res.append([-v(i, j, d), -v(i, j, dp)])
+def exactly_one(variables):
+    # ipdb.set_trace()
+    cnf = [ variables ]
+    n = len(variables)
 
-    def valid(cells): 
-        for i, xi in enumerate(cells):
-            # print(cells)
-            # print("\ni")
-            # print(i)
-            # print("xi")
-            # print(xi)
-            for j, xj in enumerate(cells):
-                # print('\nj')
-                # print(j)
-                # print('xj')
-                # print(xj)
-                if i < j:
-                    for d in range(1, 10):
-                        res.append([-v(xi[0], xi[1], d), -v(xj[0], xj[1], d)])
+    for i in range(n):
+        for j in range(i+1, n):
+            v1 = variables[i]
+            v2 = variables[j]
+            cnf.append([-v1, -v2])
 
-    # ensure rows and columns have distinct values
-    for i in range(1, 10):
-        valid([(i, j) for j in range(1, 10)])
-        # print([(i, j) for j in range(1, 10)])
-        valid([(j, i) for j in range(1, 10)])
+    return cnf
 
-    # ensure diagonals have distinct values
-    valid([(j, 10 - j) for j in range(9, 0, -1)])
-    valid([(j, j) for j in range(1, 10)])
+def transform(i, j, k):
+    return i*N*N + j*N + k + 1
 
-    # ensure 3x3 sub-grids "regions" have distinct values
-    for i in 1, 4, 7:
-        for j in 1, 4 ,7:
-            valid([(i + k % 3, j + k // 3) for k in range(9)])
-
-    # ensure knights move cells have distinct values
-    for i in range(1, 10):
-        for j in range(1, 10):
-            valid([(i,j),(i+1,j+2)])
-            valid([(i,j),(i+2,j+1)])
-            # print(i,j)
-            # print(i+1, j+2)
-            # print('\n\n\n\n\n')
-
-    # assert len(res) == 81 * (1 + 36) + 27 * 324
-    return res
-
-def solve(grid):
-    #solve a Sudoku problem
-    clauses = sudoku_clauses()
-    for i in range(1, 10):
-        for j in range(1, 10):
-            d = grid[i - 1][j - 1]
-            # For each digit already known, a clause (with one literal). 
-            if d:
-                clauses.append([v(i, j, d)])
-    
-    # Print number SAT clause  
-    numclause = len(clauses)
-    print ("P CNF " + str(numclause) +"(number of clauses)")
-    
-    # solve the SAT problem
-    start = time.time()
-    sol = set(pycosat.solve(clauses))
-    end = time.time()
-    print("Time: "+str(end - start))
-    
-    def read_cell(i, j):
-        # return the digit of cell i, j according to the solution
-        for d in range(1, 10):
-            if v(i, j, d) in sol:
-                return d
-
-    for i in range(1, 10):
-        for j in range(1, 10):
-            grid[i - 1][j - 1] = read_cell(i, j)
-
+def inverse_transform(v):
+    # ipdb.set_trace()
+    v, k = divmod(v-1, N)
+    v, j = divmod(v, N)
+    v, i = divmod(v, N)
+    return i, j, k
 
 if __name__ == '__main__':
-    from pprint import pprint
+    cnf = []
+    count = 0
 
-    # Sudoku problem generated by websudoku.com
-    # easy = [[0, 0, 0, 1, 0, 9, 4, 2, 7],
-    #         [1, 0, 9, 8, 0, 0, 0, 0, 6],
-    #         [0, 0, 7, 0, 5, 0, 1, 0, 8],
-    #         [0, 5, 6, 0, 0, 0, 0, 8, 2],
-    #         [0, 0, 0, 0, 2, 0, 0, 0, 0],
-    #         [9, 4, 0, 0, 0, 0, 6, 1, 0],
-    #         [7, 0, 4, 0, 6, 0, 9, 0, 0],
-    #         [6, 0, 0, 0, 0, 8, 2, 0, 5],
-    #         [2, 9, 5, 3, 0, 1, 0, 0, 0]]
-        
-    medium = [[5, 8, 0, 0, 0, 1, 0, 0, 0],
-            [0, 3, 0, 0, 6, 0, 0, 7, 0],
-            [9, 0, 0, 3, 2, 0, 1, 0, 6],
-            [0, 0, 0, 0, 0, 0, 0, 5, 0],
-            [3, 0, 9, 0, 0, 0, 2, 0, 1],
-            [0, 5, 0, 0, 0, 0, 0, 0, 0],
-            [6, 0, 2, 0, 5, 7, 0, 0, 8],
-            [0, 4, 0, 0, 8, 0, 0, 1, 0],
-            [0, 0, 0, 1, 0, 0, 0, 6, 5]]
+    # Knight's move contraints
+    for s in range(N):
+        for x in range(N):
+            for y in range(N):
+                valid_moves = getAllValidMoves(x,y)
+                valid_moves.append([x, y])
+                cnf = cnf + exactly_one_knights([ transform(x, y, s) for x,y in valid_moves ])
 
-    evil = [[0, 2, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 6, 0, 0, 0, 0, 3],
-            [0, 7, 4, 0, 8, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 3, 0, 0, 2],
-            [0, 8, 0, 0, 4, 0, 0, 1, 0],
-            [6, 0, 0, 5, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 7, 8, 0],
-            [5, 0, 0, 0, 0, 9, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 4, 0]]
+    # Diagonal constraints
+    for s in range(N):
+        cnf = cnf + exactly_one([ transform(x, N-(x+1), s) for x in range(N) ])
+        cnf = cnf + exactly_one([ transform(x, x, s) for x in range(N) ])
 
-    hard = [[0, 2, 0, 0, 0, 0, 0, 3, 0],
-            [0, 0, 0, 6, 0, 1, 0, 0, 0],
-            [0, 6, 8, 2, 0, 0, 0, 0, 5],
-            [0, 0, 9, 0, 0, 8, 3, 0, 0],
-            [0, 4, 6, 0, 0, 0, 7, 5, 0],
-            [0, 0, 1, 3, 0, 0, 4, 0, 0],
-            [9, 0, 0, 0, 0, 7, 5, 1, 0],
-            [0, 0, 0, 1, 0, 4, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0, 9, 0]]
-    
-    blank = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+    # Cell, row and column constraints
+    for x in range(N):
+        for s in range(N):            
+            cnf = cnf + exactly_one([ transform(x, y, s) for y in range(N) ])
+            cnf = cnf + exactly_one([ transform(y, x, s) for y in range(N) ])
+        for y in range(N):
+            cnf = cnf + exactly_one([ transform(x, y, k) for k in range(N) ])
 
-    # easy = [[0, 0, 0, 0, 0, 0, 0, 5, 8],
-    #         [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    #         [5, 0, 8, 0, 0, 9, 0, 4, 7],
-    #         [3, 5, 2, 9, 8, 0, 0, 0, 6],
-    #         [0, 0, 0, 0, 0, 0, 9, 0, 5],
-    #         [0, 0, 0, 0, 0, 0, 0, 3, 0],
-    #         [0, 0, 0, 2, 0, 0, 0, 9, 1],
-    #         [0, 0, 7, 0, 0, 0, 8, 0, 4],
-    #         [9, 0, 0, 4, 7, 6, 0, 0, 0]]
+    # Sub-matrix constraints
+    for k in range(N):
+        for x in range(M):
+            for y in range(M):
+                v = [ transform(y*M + i, x*M + j, k) for i in range(M) for j in range(M)]
+                cnf = cnf + exactly_one(v)
 
-    easy = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 6, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [3, 8, 4, 6, 7, 2, 0, 0, 0],
-            [0, 0, 0, 1, 5, 9, 0, 0, 0],
-            [0, 0, 0, 8, 4, 3, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 2]]
-    
-    if(len(sys.argv[1:]) == 0):
-        print('Argument error, check --help')
-    else:
-        main(sys.argv[1:])
+    # See contribution from @GregoryMorse below
+    cnf = { frozenset(x) for x in cnf }
+    cnf = list(cnf)
+
+    # A 16-constraint Sudoku
+    # constraints = [
+        # (0, 3, 7),
+        # (2, 3, 4),
+    #     (2, 4, 3),
+    #     (2, 6, 2),
+    #     (3, 8, 6),
+    #     (4, 3, 5),
+    #     (4, 5, 9),
+    #     (5, 6, 4),
+    #     (5, 7, 1),
+    #     (5, 8, 8),
+    #     (6, 4, 8),
+    #     (6, 5, 1),
+    #     (7, 2, 2),
+    #     (7, 7, 5),
+    #     (8, 1, 4),
+    #     (8, 6, 3),
+    # ]
+
+    # The big one
+    constraints= [
+        (8,8,2),
+        (3,0,3),
+        (3,1,8),
+        (3,2,4),
+        # Magic square hardcoded
+        (3,3,6),
+        (3,4,7),
+        (3,5,2),
+        (4,3,1),
+        (4,4,5),
+        (4,5,9),
+    ]
+
+
+    cnf = cnf + [[transform(z[0], z[1], z[2])-1] for z in constraints]
+
+    for solution in pycosat.itersolve(cnf):
+        X = [ inverse_transform(v) for v in solution if v > 0]
+        for i, cell in enumerate(sorted(X, key=lambda h: h[0] * N*N + h[1] * N)):
+            print(cell[2]+1, end=" ")
+            if (i+1) % N == 0: print("")
+        print('\n-----------------\n')
