@@ -74,7 +74,7 @@ if __name__ == "__main__":
             for y in range(N):
                 valid_moves = getAllValidMoves(x, y)
                 valid_moves.append([x, y])
-                cnf = cnf + exactly_one_knights(
+                cnf = cnf + exactly_one_knights_move(
                     [transform(x, y, s) for x, y in valid_moves]
                 )
 
