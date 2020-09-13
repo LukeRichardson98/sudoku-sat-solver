@@ -29,7 +29,7 @@ def getAllValidMoves(x0, y0):
 
 
 def exactly_one_knights_move(variables):
-    """Checks for the same value in all cells that are a knights move away from a given cell."""
+    """Check that no cells share the same value as a specific cell when they're a knight's move away."""
     cnf = []
 
     for valid_move in variables[:-1]:
@@ -40,6 +40,7 @@ def exactly_one_knights_move(variables):
 
 
 def exactly_one(variables):
+    '''Check that all cells in 'variales' have unique values.'''
     cnf = [variables]
     n = len(variables)
 
@@ -64,89 +65,98 @@ def inverse_transform(v):
     v, i = divmod(v, N)
     return i, j, k
 
+while True:
+        if __name__ == "__main__":
+            solver_select = input("What type of sudoku would you like to solve? Options are:\nClassic\nDiagonal\nAnti-Knight\nMagic Square\n")
+            cnf = []
 
-if __name__ == "__main__":
-    cnf = []
+            # Cell, row and column constraints
+            for x in range(N):
+                for s in range(N):
+                    cnf = cnf + exactly_one([transform(x, y, s) for y in range(N)])
+                    cnf = cnf + exactly_one([transform(y, x, s) for y in range(N)])
+                for y in range(N):
+                    cnf = cnf + exactly_one([transform(x, y, k) for k in range(N)])
 
-    # Knight's move contraints
-    for s in range(N):
-        for x in range(N):
-            for y in range(N):
-                valid_moves = getAllValidMoves(x, y)
-                valid_moves.append([x, y])
-                cnf = cnf + exactly_one_knights_move(
-                    [transform(x, y, s) for x, y in valid_moves]
-                )
+            # Sub-matrix constraints
+            for k in range(N):
+                for x in range(M):
+                    for y in range(M):
+                        v = [
+                            transform(y * M + i, x * M + j, k)
+                            for i in range(M)
+                            for j in range(M)
+                        ]
+                        cnf = cnf + exactly_one(v)
 
-    # Diagonal constraints
-    for s in range(N):
-        cnf = cnf + exactly_one([transform(x, N - (x + 1), s) for x in range(N)])
-        cnf = cnf + exactly_one([transform(x, x, s) for x in range(N)])
+            if solver_select.lower() == 'classic':
+                pass
+            elif solver_select.lower() == 'diagonal': 
+                # Diagonal constraints
+                for s in range(N):
+                    cnf = cnf + exactly_one([transform(x, N - (x + 1), s) for x in range(N)])
+                    cnf = cnf + exactly_one([transform(x, x, s) for x in range(N)])
+            elif solver_select.lower() == 'anti-knight': 
+                # Knight's move contraints
+                for s in range(N):
+                    for x in range(N):
+                        for y in range(N):
+                            valid_moves = getAllValidMoves(x, y)
+                            valid_moves.append([x, y])
+                            cnf = cnf + exactly_one_knights_move(
+                                [transform(x, y, s) for x, y in valid_moves]
+                            )
+            else:
+                print("You gave an undefined sudoku type, please try again")
+                break
 
-    # Cell, row and column constraints
-    for x in range(N):
-        for s in range(N):
-            cnf = cnf + exactly_one([transform(x, y, s) for y in range(N)])
-            cnf = cnf + exactly_one([transform(y, x, s) for y in range(N)])
-        for y in range(N):
-            cnf = cnf + exactly_one([transform(x, y, k) for k in range(N)])
 
-    # Sub-matrix constraints
-    for k in range(N):
-        for x in range(M):
-            for y in range(M):
-                v = [
-                    transform(y * M + i, x * M + j, k)
-                    for i in range(M)
-                    for j in range(M)
-                ]
-                cnf = cnf + exactly_one(v)
 
-    # cnf = {frozenset(x) for x in cnf}
-    # cnf = list(cnf)
+            # cnf = {frozenset(x) for x in cnf}
+            # cnf = list(cnf)
 
-    # A 16-constraint Sudoku
-    # constraints = [
-    # (0, 3, 7),
-    # (2, 3, 4),
-    #     (2, 4, 3),
-    #     (2, 6, 2),
-    #     (3, 8, 6),
-    #     (4, 3, 5),
-    #     (4, 5, 9),
-    #     (5, 6, 4),
-    #     (5, 7, 1),
-    #     (5, 8, 8),
-    #     (6, 4, 8),
-    #     (6, 5, 1),
-    #     (7, 2, 2),
-    #     (7, 7, 5),
-    #     (8, 1, 4),
-    #     (8, 6, 3),
-    # ]
+            # A 16-constraint Sudoku
+            # constraints = [
+            # (0, 3, 7),
+            # (2, 3, 4),
+            #     (2, 4, 3),
+            #     (2, 6, 2),
+            #     (3, 8, 6),
+            #     (4, 3, 5),
+            #     (4, 5, 9),
+            #     (5, 6, 4),
+            #     (5, 7, 1),
+            #     (5, 8, 8),
+            #     (6, 4, 8),
+            #     (6, 5, 1),
+            #     (7, 2, 2),
+            #     (7, 7, 5),
+            #     (8, 1, 4),
+            #     (8, 6, 3),
+            # ]
 
-    # Knight's move, diagonal, magic square sudoku
-    constraints = [
-        (8, 8, 2),
-        (3, 0, 3),
-        (3, 1, 8),
-        (3, 2, 4),
-        # Magic square hardcoded
-        (3, 3, 6),
-        (3, 4, 7),
-        (3, 5, 2),
-        (4, 3, 1),
-        (4, 4, 5),
-        (4, 5, 9),
-    ]
+            # Knight's move, diagonal, magic square sudoku
+            constraints = [
+                # (8, 8, 2),
+                # (3, 0, 3),
+                # (3, 1, 8),
+                # (3, 2, 4),
+                # # Magic square hardcoded
+                # (3, 3, 6),
+                # (3, 4, 7),
+                # (3, 5, 2),
+                # (4, 3, 1),
+                # (4, 4, 5),
+                # (4, 5, 9),
+            ]
 
-    cnf = cnf + [[transform(z[0], z[1], z[2]) - 1] for z in constraints]
+            cnf = cnf + [[transform(z[0], z[1], z[2]) - 1] for z in constraints]
 
-    ## Outputs all valid sudoku solutions.
-    for solution in pycosat.itersolve(cnf):
-        X = [inverse_transform(v) for v in solution if v > 0]
-        for i, cell in enumerate(sorted(X, key=lambda h: h[0] * N * N + h[1] * N)):
-            print(cell[2] + 1, end=" ")
-            if (i + 1) % N == 0:
-                print("")
-        print("\n-----------------\n")
+            ## Outputs all valid sudoku solutions.
+            for solution in pycosat.itersolve(cnf):
+                X = [inverse_transform(v) for v in solution if v > 0]
+                for i, cell in enumerate(sorted(X, key=lambda h: h[0] * N * N + h[1] * N)):
+                    print(cell[2] + 1, end=" ")
+                    if (i + 1) % N == 0:
+                        print("")
+                print("\n-----------------\n")
